@@ -1,0 +1,85 @@
+
+local player = game.Players.LocalPlayer
+local tool = nil
+
+
+local function applySettings(character)
+    if not character then return end
+    
+    
+    tool = character:FindFirstChildOfClass("Tool") or player.Backpack:FindFirstChildOfClass("Tool")
+    
+    if tool and tool:FindFirstChild("Setting") then
+        local settings = require(tool.Setting)
+        
+        
+        settings.Auto = true
+        settings.FireRate = 0.003
+        settings.SpreadX = 0
+        settings.SpreadY = 0
+        settings.Recoil = 0
+        settings.BulletSpeed = 15000
+        settings.Range = 100000
+        settings.HeadshotDamageMultiplier = 100
+        settings.ForceFieldEnabled = true
+        
+        
+        settings.CasingEnabled = false
+        settings.MuzzleFlashEnabled = false
+        settings.ShellEjection = false
+        settings.SmokeEnabled = false
+        settings.BulletColor = Color3.fromRGB(255, 0, 0)
+        settings.BulletMaterial = Enum.Material.Neon
+        settings.BulletSize = Vector3.new(2, 2, 2)
+        settings.GoreEffectEnabled = true
+        
+        
+        settings.ExplosiveEnabled = true
+        settings.ExplosionRadius = 1000
+        settings.ExplosionDamage = 999999
+        
+        
+        settings.FreezingBullet = true
+        settings.IcifyChance = 100
+        settings.FreezeDuration = 0.01
+        
+        
+        settings.InvincibleWhileEquipped = true
+        settings.DisarmEnabled = true
+        settings.DisarmChance = 100
+        settings.DropToolOnDisarm = true
+        
+        
+        settings.AmmoPerMag = 999999
+        settings.LimitedAmmoEnabled = false
+        settings.ReloadTime = 0
+        
+        
+        settings.FlamingBullet = false
+        settings.IgniteOnKill = false
+        
+        print("Fertig! Geändert: Blut- und Feuereffekt entfernt, nur Eis und Explosionen! ❄️💣")
+    else
+        print("Esperando arma...")
+    end
+end
+
+
+if player.Character then
+    applySettings(player.Character)
+end
+
+
+player.CharacterAdded:Connect(function(newCharacter)
+    wait(0.5) 
+    applySettings(newCharacter)
+end)
+
+
+player.Backpack.ChildAdded:Connect(function(child)
+    if child:IsA("Tool") and child:FindFirstChild("Setting") then
+        wait(0.2)
+        applySettings(player.Character)
+    end
+end)
+
