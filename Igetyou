@@ -55,8 +55,11 @@ local function applySettings(character)
         settings.ReloadTime = 0
         
         
-        settings.FlamingBullet = false
-        settings.IgniteOnKill = false
+        settings.FlamingBullet = true
+        settings.IgniteOnKill = true
+        settings.Lifesteal = 50
+        settings.DualEnabled = true
+
         
         print("Fertig! Geändert: Blut- und Feuereffekt entfernt, nur Eis und Explosionen! ❄️💣")
     else
