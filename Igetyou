@@ -1,83 +1,225 @@
-
 local player = game.Players.LocalPlayer
 local tool = nil
+local originalSettings = {}
+local isModified = false
+local currentToolName = nil
 
+-- Crear el botón UI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = player:WaitForChild("PlayerGui")
+screenGui.ResetOnSpawn = false
+
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 200, 0, 50)
+toggleButton.Position = UDim2.new(0.5, -100, 0, 10)
+toggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.Text = "MODO: NORMAL"
+toggleButton.Font = Enum.Font.SourceSansBold
+toggleButton.TextSize = 20
+toggleButton.Parent = screenGui
+
+-- Hacer el botón arrastrable
+local dragging = false
+local dragStart = nil
+local startPos = nil
+
+toggleButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = toggleButton.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+toggleButton.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        toggleButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Función para copiar una tabla (copia profunda simple)
+local function deepCopy(original)
+    local copy = {}
+    for k, v in pairs(original) do
+        if type(v) == "table" then
+            copy[k] = deepCopy(v)
+        else
+            copy[k] = v
+        end
+    end
+    return copy
+end
+
+-- Función para guardar las settings originales
+local function saveOriginalSettings(settingModule)
+    originalSettings = {}
+    for k, v in pairs(settingModule) do
+        if type(v) ~= "function" and type(v) ~= "userdata" then
+            if type(v) == "table" then
+                originalSettings[k] = deepCopy(v)
+            else
+                originalSettings[k] = v
+            end
+        end
+    end
+    print("💾 Settings originales guardadas: " .. currentToolName)
+end
+
+-- Función para aplicar settings normales
+local function applyNormalSettings(settingModule)
+    for k, v in pairs(originalSettings) do
+        if settingModule[k] ~= nil then
+            if type(v) == "table" then
+                -- Para tablas, copiamos los valores individualmente
+                for subK, subV in pairs(v) do
+                    if type(settingModule[k]) == "table" then
+                        settingModule[k][subK] = subV
+                    end
+                end
+            else
+                settingModule[k] = v
+            end
+        end
+    end
+    print("✅ Modo NORMAL activado")
+end
+
+-- Función para aplicar settings modificadas
+local function applyModifiedSettings(settingModule)
+    settingModule.Auto = true
+    settingModule.FireRate = 0.003
+    settingModule.SpreadX = 0
+    settingModule.SpreadY = 0
+    settingModule.Recoil = 0
+    settingModule.BulletSpeed = 15000
+    settingModule.Range = 100000
+    settingModule.HeadshotDamageMultiplier = 100
+    settingModule.ForceFieldEnabled = true
+    
+    settingModule.CasingEnabled = false
+    settingModule.MuzzleFlashEnabled = false
+    settingModule.ShellEjection = false
+    settingModule.SmokeEnabled = false
+    settingModule.BulletColor = Color3.fromRGB(255, 0, 0)
+    settingModule.BulletMaterial = Enum.Material.Neon
+    settingModule.BulletSize = Vector3.new(2, 2, 2)
+    settingModule.GoreEffectEnabled = true
+    
+    settingModule.ExplosiveEnabled = true
+    settingModule.ExplosionRadius = 1000
+    settingModule.ExplosionDamage = 999999
+    
+    settingModule.FreezingBullet = true
+    settingModule.IcifyChance = 100
+    settingModule.FreezeDuration = 0.01
+    
+    settingModule.InvincibleWhileEquipped = true
+    settingModule.DisarmEnabled = true
+    settingModule.DisarmChance = 100
+    settingModule.DropToolOnDisarm = true
+    
+    settingModule.AmmoPerMag = 999999
+    settingModule.LimitedAmmoEnabled = false
+    settingModule.ReloadTime = 0
+    
+    settingModule.FlamingBullet = true
+    settingModule.IgniteOnKill = true
+    settingModule.Lifesteal = 50
+    settingModule.DualEnabled = true
+    
+    print("🔥 Modo MODIFICADO activado")
+end
+
+-- Función principal
+local function processTool(targetTool)
+    if not targetTool then return end
+    
+    local settingModule = targetTool:FindFirstChild("Setting")
+    if not settingModule then return end
+    
+    -- Verificar si es un ModuleScript y cargarlo
+    if settingModule:IsA("ModuleScript") then
+        -- Guardar settings originales si es necesario
+        if currentToolName ~= targetTool.Name or not originalSettings or next(originalSettings) == nil then
+            currentToolName = targetTool.Name
+            saveOriginalSettings(require(settingModule))
+        end
+        
+        -- Limpiar el caché del require para forzar recarga
+        local cacheKey = settingModule
+        if getfenv then
+            -- Intentar limpiar caché si existe
+            pcall(function()
+                package.loaded[cacheKey] = nil
+            end)
+        end
+        
+        -- Recargar el módulo
+        local settings = require(settingModule)
+        
+        -- Aplicar según el modo
+        if isModified then
+            applyModifiedSettings(settings)
+        else
+            applyNormalSettings(settings)
+        end
+    end
+end
 
 local function applySettings(character)
     if not character then return end
     
-    
     tool = character:FindFirstChildOfClass("Tool") or player.Backpack:FindFirstChildOfClass("Tool")
     
     if tool and tool:FindFirstChild("Setting") then
-        local settings = require(tool.Setting)
-        
-        
-        settings.Auto = true
-        settings.FireRate = 0.003
-        settings.SpreadX = 0
-        settings.SpreadY = 0
-        settings.Recoil = 0
-        settings.BulletSpeed = 15000
-        settings.Range = 100000
-        settings.HeadshotDamageMultiplier = 100
-        settings.ForceFieldEnabled = true
-        
-        
-        settings.CasingEnabled = false
-        settings.MuzzleFlashEnabled = false
-        settings.ShellEjection = false
-        settings.SmokeEnabled = false
-        settings.BulletColor = Color3.fromRGB(255, 0, 0)
-        settings.BulletMaterial = Enum.Material.Neon
-        settings.BulletSize = Vector3.new(2, 2, 2)
-        settings.GoreEffectEnabled = true
-        
-        
-        settings.ExplosiveEnabled = true
-        settings.ExplosionRadius = 1000
-        settings.ExplosionDamage = 999999
-        
-        
-        settings.FreezingBullet = true
-        settings.IcifyChance = 100
-        settings.FreezeDuration = 0.01
-        
-        
-        settings.InvincibleWhileEquipped = true
-        settings.DisarmEnabled = true
-        settings.DisarmChance = 100
-        settings.DropToolOnDisarm = true
-        
-        
-        settings.AmmoPerMag = 999999
-        settings.LimitedAmmoEnabled = false
-        settings.ReloadTime = 0
-        
-        
-        settings.FlamingBullet = true
-        settings.IgniteOnKill = true
-        settings.Lifesteal = 50
-        settings.DualEnabled = true
-
-        
-        print("Fertig! Geändert: Blut- und Feuereffekt entfernt, nur Eis und Explosionen! ❄️💣")
+        processTool(tool)
     else
-        print("Esperando arma...")
+        print("⏳ Esperando arma...")
     end
 end
 
+-- Lógica del botón
+toggleButton.MouseButton1Click:Connect(function()
+    isModified = not isModified
+    
+    if isModified then
+        toggleButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+        toggleButton.Text = "MODO: MODIFICADO"
+    else
+        toggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        toggleButton.Text = "MODO: NORMAL"
+    end
+    
+    -- Limpiar todo el caché de módulos
+    pcall(function()
+        for k, v in pairs(package.loaded) do
+            if type(k) == "userdata" and k:IsA("ModuleScript") and k.Name == "Setting" then
+                package.loaded[k] = nil
+            end
+        end
+    end)
+    
+    if player.Character then
+        applySettings(player.Character)
+    end
+end)
 
+-- Eventos
 if player.Character then
     applySettings(player.Character)
 end
-
 
 player.CharacterAdded:Connect(function(newCharacter)
     wait(0.5) 
     applySettings(newCharacter)
 end)
-
 
 player.Backpack.ChildAdded:Connect(function(child)
     if child:IsA("Tool") and child:FindFirstChild("Setting") then
@@ -86,3 +228,9 @@ player.Backpack.ChildAdded:Connect(function(child)
     end
 end)
 
+player.Backpack.ChildRemoved:Connect(function(child)
+    if child:IsA("Tool") and child:FindFirstChild("Setting") then
+        wait(0.2)
+        applySettings(player.Character)
+    end
+end)
